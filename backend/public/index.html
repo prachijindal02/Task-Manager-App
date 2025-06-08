@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Task List with Caching</title>
+  <style>
+    /* Your existing CSS here */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #4a90e2;
+      margin-bottom: 10px;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .task {
+      border-bottom: 1px solid #eee;
+      padding: 15px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task:last-child {
+      border-bottom: none;
+    }
+    .task-info {
+      max-width: 80%;
+    }
+    .task-title {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin: 0 0 5px 0;
+      color: #222;
+    }
+    .task-desc {
+      margin: 0;
+      font-size: 0.9em;
+      color: #666;
+    }
+    .task-status {
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-weight: bold;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      color: white;
+    }
+    .todo {
+      background-color: #ff6f61; /* soft red */
+    }
+    .done {
+      background-color: #4caf50; /* green */
+    }
+    .loading {
+      text-align: center;
+      color: #888;
+      font-style: italic;
+      margin-top: 50px;
+    }
+    #refreshCacheBtn {
+      margin: 0 auto 30px;
+      display: block;
+      background: #f39c12;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #refreshCacheBtn:hover {
+      background: #d78c0c;
+    }
+  </style>
+</head>
+<body>
+  <h1>My Task List with Caching</h1>
+
+  <button id="refreshCacheBtn">Refresh Cache from Server</button>
+
+  <div class="container" id="taskContainer">
+    <p class="loading">Loading tasks...</p>
+  </div>
+
+  <script>
+    // Fetch tasks from server
+    async function fetchTasksFromServer() {
+      const res = await fetch('/tasks'); // your backend endpoint
+      if (!res.ok) throw new Error('Failed to fetch tasks from server');
+      return await res.json();
+    }
+
+    // Load tasks from cache or server
+    async function loadTasks() {
+      const cached = localStorage.getItem('tasks');
+      if (cached) {
+        return JSON.parse(cached);
+      } else {
+        const tasks = await fetchTasksFromServer();
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        return tasks;
+      }
+    }
+
+    // Render tasks on page
+    function renderTasks(tasks) {
+      const container = document.getElementById('taskContainer');
+      container.innerHTML = '';
+
+      if (tasks.length === 0) {
+        container.innerHTML = '<p>No tasks found.</p>';
+        return;
+      }
+
+      tasks.forEach(task => {
+        const taskEl = document.createElement('div');
+        taskEl.className = 'task';
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'task-info';
+
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'task-title';
+        titleEl.textContent = task.title;
+
+        const descEl = document.createElement('p');
+        descEl.className = 'task-desc';
+        descEl.textContent = task.description;
+
+        infoDiv.appendChild(titleEl);
+        infoDiv.appendChild(descEl);
+
+        const statusEl = document.createElement('span');
+        statusEl.className = 'task-status ' + (task.status === 'done' ? 'done' : 'todo');
+        statusEl.textContent = task.status;
+
+        taskEl.appendChild(infoDiv);
+        taskEl.appendChild(statusEl);
+
+        container.appendChild(taskEl);
+      });
+    }
+
+    // Refresh cache button handler
+    document.getElementById('refreshCacheBtn').addEventListener('click', async () => {
+      try {
+        document.getElementById('taskContainer').innerHTML = '<p class="loading">Refreshing tasks from server...</p>';
+        const tasks = await fetchTasksFromServer();
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        renderTasks(tasks);
+      } catch (err) {
+        alert('Failed to refresh cache: ' + err.message);
+      }
+    });
+
+    // On page load
+    loadTasks()
+      .then(renderTasks)
+      .catch(err => {
+        document.getElementById('taskContainer').innerHTML = `<p style="color:red; text-align:center;">Error loading tasks: ${err.message}</p>`;
+      });
+  </script>
+</body>
+</html>
